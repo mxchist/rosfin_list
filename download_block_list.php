@@ -5,7 +5,7 @@ require_once(__DIR__ . DIRECTORY_SEPARATOR . "FileOperation.php");
 require_once(__DIR__ . DIRECTORY_SEPARATOR . "ConfigRosFin.php");
 
 /*
- Перечень организаций и физических лиц, в отношении которых имеются сведения об их причастности к экстремистской деятельности или терроризму
+ Перечень лиц, в отношении которых действует решение Комиссии о замораживании (блокировании) принадлежащих им денежных средств или иного имущества
  */
 
 $post_data = ConfigRosFin::getAuthData();
@@ -28,11 +28,14 @@ $options = array (
     CURLOPT_COOKIEFILE => __DIR__ . DIRECTORY_SEPARATOR . 'cookie.txt'
 );
 
-$url = "https://portal.fedsfm.ru/SkedDownload/GetActiveSked?type=dbf";
-$fileName = __DIR__ . DIRECTORY_SEPARATOR . "activeSked.zip";
-CurlRequest::downloadFile($url, $fileName, $options);
+$url = "https://portal.fedsfm.ru/XmlCatalogDownload/GetActiveMvk";
 
-$directoryPath = __DIR__ . DIRECTORY_SEPARATOR . "activeSked";
+$directoryPath = __DIR__ . DIRECTORY_SEPARATOR . "activeMvk";
 FileOperation::deleteDirectory($directoryPath);
-FileOperation::extractZip($fileName, $directoryPath);
+$ok = mkdir($directoryPath);
+if (!$ok) {
+    die("Error while creating directory");
+}
 
+$filePath = $directoryPath . DIRECTORY_SEPARATOR . "activeMvk.xml";
+CurlRequest::downloadFile($url, $filePath, $options);
