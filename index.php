@@ -6,7 +6,18 @@ error_reporting(E_ALL);
 header("Content-Type: text/plain; charset=utf-8");
 
 $name = $_GET["name"];
+// дата рождения в формате дд.мм.гггг
+$birthDate = isset($_GET["birth_date"]) ? $_GET["birth_date"] : "";
 
+$birthDay = "";
+$birthMonth = "";
+$birthYear = "";
+$arr = explode(".", $birthDate);
+if (count($arr) == 3) {
+    $birthDay = $arr[0];
+    $birthMonth = $arr[1];
+    $birthYear = $arr[2];
+}
 
 $foundName = "";
 $foundDescription = "";
@@ -30,6 +41,7 @@ foreach ($xml->СписокАктуальныхРешений as $element) {
         foreach ($subjectList->Субъект as $subject) {
             $namesArray = array();
             $subjectName = "";
+            $hisDate = "";
             if (isset($subject->ФЛ)) {
                 $subjectName = (string) $subject->ФЛ->ФИО;
                 $namesArray[] = $subjectName;
@@ -41,6 +53,9 @@ foreach ($xml->СписокАктуальныхРешений as $element) {
                         $namesArray[] = (string) $otherName->ФИО;
                     }
                 }
+                if (isset($subject->ФЛ->ДатаРождения)) {
+                    $hisDate = (string) $subject->ФЛ->ДатаРождения;
+                }
             } else if (isset($subject->ЮЛ)) {
                 $subjectName = (string) $subject->ЮЛ->Наименование;
                 $namesArray[] = $subjectName;
@@ -50,8 +65,20 @@ foreach ($xml->СписокАктуальныхРешений as $element) {
             }
             foreach ($namesArray as $nameu) {
                 if (mb_strripos($nameu, $name, 0, "utf-8") !== false) {
-                    $foundName = $nameu;
-                    $foundDescription = $subject->РешениеПоСубъекту;
+                    // проверка даты
+                    $dateVerified = true;
+                    if (!empty($birthDate)) {
+                        $formatedBirthDate = $birthYear . "-" . $birthMonth . "-" . $birthDay;
+                        if ($hisDate == $formatedBirthDate) {
+                            $dateVerified = true;
+                        } else {
+                            $dateVerified = false;
+                        }
+                    }
+                    if ($dateVerified) {
+                        $foundName = $nameu;
+                        $foundDescription = $subject->РешениеПоСубъекту;
+                    }
                 }
             }
         }
@@ -81,6 +108,9 @@ if ($foundName == "") {
                             $namesArray[] = (string) $otherName->ФИО;
                         }
                     }
+                    if (isset($subject->ФЛ->ДатаРождения)) {
+                        $hisDate = (string) $subject->ФЛ->ДатаРождения;
+                    }
                 } else if (isset($subject->ЮЛ)) {
                     $subjectName = (string) $subject->ЮЛ->Наименование;
                     $namesArray[] = $subjectName;
@@ -90,8 +120,20 @@ if ($foundName == "") {
                 }
                 foreach ($namesArray as $nameu) {
                     if (mb_strripos($nameu, $name, 0, "utf-8") !== false) {
-                        $foundName = $nameu;
-                        $foundDescription = $subject->Примечание;
+                        // проверка даты
+                        $dateVerified = true;
+                        if (!empty($birthDate)) {
+                            $formatedBirthDate = $birthYear . "-" . $birthMonth . "-" . $birthDay;
+                            if ($hisDate == $formatedBirthDate) {
+                                $dateVerified = true;
+                            } else {
+                                $dateVerified = false;
+                            }
+                        }
+                        if ($dateVerified) {
+                            $foundName = $nameu;
+                            $foundDescription = $subject->Примечание;
+                        }
                     }
                 }
             }
@@ -138,27 +180,29 @@ if ($foundName == "") {
     for ($i = 1; $i <= $record_numbers; $i++) {
         $row = dbase_get_record_with_names($db, $i);
         $nameu = iconv("cp866", "utf-8", ltrim(rtrim($row["NAMEU"])));
+        $hisDate = iconv("cp866", "utf-8", ltrim(rtrim($row["GR"])));
         //$nameu = "";
         //$name  = "";  
-        if (mb_strripos($nameu, $name, 0, "utf-8") === false) {
-            //echo $name."\r\n";
+        
+        if (mb_strripos($nameu, $name, 0, "utf-8") !== false) {
+            
+            $dateVerified = true;
+            
+            if (!empty($birthDate)) {
+                $formatedBirthDate = $birthYear . $birthMonth . $birthDay;
+                if ($hisDate == $formatedBirthDate) {
+                    $dateVerified = true;
+                } else {
+                    $dateVerified = false;
+                }
+            }
+            if ($dateVerified) {
+                $foundName = $nameu;
+                $foundDescription = iconv("cp866", "utf-8", ltrim(rtrim($row["DESCRIPT"])));
+                break;
+            }
         }
-        else
-        {   
-            $foundName = $nameu;
-            $foundDescription = iconv("cp866", "utf-8", ltrim(rtrim($row["DESCRIPT"])));
-            /*
-             for ($j = $i + 1; $j <= $record_numbers; $j++) {
-             $row = dbase_get_record_with_names($db, $j);
-             if ($row["TU"] == 0) {
-             $foundDescription = $foundDescription . iconv("cp866", "utf-8", ltrim(rtrim($row["DESCRIPT"])));
-             } else {
-             break;
-             }
-             }
-             */  
-            break;
-        }
+        
     }
     // Закроем DBF файл
     dbase_close($db);
